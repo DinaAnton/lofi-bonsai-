@@ -1,0 +1,19 @@
+{
+  "id": "./",
+  "name": "Lofi Bonsai",
+  "short_name": "Lofi Bonsai",
+  "description": "A cozy offline lofi companion — your music, a calm room, a little bonsai.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#201530",
+  "theme_color": "#201530",
+  "lang": "en",
+  "categories": ["music", "lifestyle"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

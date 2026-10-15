@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>lofi bonsai</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#201530">
+<meta name="description" content="lofi bonsai — a cozy offline lofi companion">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Lofi Bonsai">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+  :root{
+    --cream:#f1e6d2; --dim:#b9a9c9; --lamp:#ffb454; --msg-color:#f3a8c4;
+    --page-bg-1:#201530; --page-bg-2:#0f0a17;
+    --deck-1:#3a2b20; --deck-2:#241a13;
+    --deck-border: rgba(0,0,0,0.4);
+    --input-bg:#1a120c; --track-bg:#0e0a08;
+  }
+  html.light{
+    --cream:#3a2a1c; --dim:#7a6552; --lamp:#c97b2e; --msg-color:#c9427a;
+    --page-bg-1:#fdf6ec; --page-bg-2:#f1e3cd;
+    --deck-1:#fffaf1; --deck-2:#f0e4d0;
+    --deck-border: rgba(0,0,0,0.12);
+    --input-bg:#e8dcc8; --track-bg:#fffaf1;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;padding:0;height:100%;
+    background: radial-gradient(ellipse at 50% 0%, var(--page-bg-1) 0%, var(--page-bg-2) 70%);
+    display:flex;align-items:center;justify-content:center;
+    font-family: 'Trebuchet MS', 'Segoe UI', sans-serif;
+    overflow:hidden;
+    transition: background 0.6s ease;
+  }
+  .stage{ display:flex;flex-direction:column;align-items:center;gap:16px; padding:24px; }
+  .titlebar{ display:flex; align-items:center; gap:14px; }
+  .logo{ height: 72px; filter: drop-shadow(0 0 10px rgba(255,180,84,0.25)); }
+  .themeBtn{
+    background: linear-gradient(180deg,#5a4130,#3a2818); border: 1px solid rgba(0,0,0,0.5);
+    color: var(--cream); border-radius: 20px; padding: 6px 14px; font-size:12px; cursor:pointer;
+    font-family:'Courier New', monospace; letter-spacing:0.5px;
+  }
+  html.light .themeBtn{ background: linear-gradient(180deg,#fff3df,#f0e0c4); }
+
+  .frame{
+    position:relative; width: 860px; aspect-ratio: 2944 / 1248; border-radius: 14px; overflow:hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  }
+  #bgVideo{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+  .frame:fullscreen{ width:100vw; height:100vh; aspect-ratio:unset; border-radius:0; }
+  .frame:fullscreen #bgVideo{ object-fit:contain; background:#000; }
+  .frame:-webkit-full-screen{ width:100vw; height:100vh; border-radius:0; }
+  .frame:-webkit-full-screen #bgVideo{ object-fit:contain; background:#000; }
+
+  .tint{ position:absolute; inset:0; z-index:3; pointer-events:none; transition: background 1.5s ease; }
+  .vignette{ position:absolute; inset:0; z-index:8; pointer-events:none; box-shadow: inset 0 0 90px 30px rgba(0,0,0,0.4); }
+
+  .deck{ width: 860px; background: linear-gradient(180deg, var(--deck-1), var(--deck-2)); border-radius: 10px;
+    padding: 14px 16px; box-shadow: 0 10px 26px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06);
+    border: 1px solid var(--deck-border); transition: background 0.6s ease; }
+  .track-display{ background: var(--track-bg); border-radius: 5px; padding: 8px 10px; margin-bottom: 10px; overflow:hidden;
+    border: 1px solid var(--deck-border); box-shadow: inset 0 2px 4px rgba(0,0,0,0.4); }
+  .track-display span{ display:inline-block; font-family: 'Courier New', monospace; color: var(--lamp);
+    font-size: 13px; letter-spacing: 1px; white-space: nowrap; }
+  .marquee span{ padding-left: 100%; display:inline-block; animation: marquee 12s linear infinite; }
+  @keyframes marquee{ from{ transform: translateX(0);} to{ transform: translateX(-100%);} }
+
+  .controls-row{ display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+  button.ctrl{ background: linear-gradient(180deg,#5a4130,#3a2818); border: 1px solid rgba(0,0,0,0.5);
+    color: var(--cream); border-radius: 6px; width: 38px; height:32px; font-size: 15px; cursor:pointer;
+    box-shadow: 0 2px 0 rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08); }
+  button.ctrl:active{ transform: translateY(1px); box-shadow: inset 0 1px 3px rgba(0,0,0,0.5); }
+  button.ctrl.play{ width:52px; color: var(--lamp); font-size:16px; }
+  button.wide{ flex:1; background: linear-gradient(180deg,#4a3626,#2c1f14); border: 1px solid rgba(0,0,0,0.5);
+    color: var(--dim); border-radius: 6px; height:32px; font-size: 12px; letter-spacing: 0.5px; cursor:pointer; }
+  button.wide.active{ color: var(--lamp); border-color: rgba(255,180,84,0.4); }
+
+  .volrow{ display:flex; align-items:center; gap:8px; }
+  .volrow label{ font-size:11px; color:var(--dim); font-family:'Courier New',monospace; width:34px;}
+  input[type=range]{ -webkit-appearance:none; appearance:none; flex:1; height:4px; border-radius:2px; background: var(--input-bg); outline:none; }
+  input[type=range]::-webkit-slider-thumb{ -webkit-appearance:none; width:12px; height:12px; border-radius:50%;
+    background: var(--lamp); cursor:pointer; box-shadow: 0 0 4px rgba(255,180,84,0.7); }
+
+  .hint{ margin-top: 4px; font-size: 10.5px; color: var(--dim); text-align:center;
+    font-family: 'Courier New', monospace; opacity:0.75; line-height:1.5; }
+
+  /* ---------------- PWA / mobile ---------------- */
+  html,body{ height:auto; min-height:100vh; min-height:100dvh; overflow-x:hidden; overflow-y:auto; -webkit-tap-highlight-color:transparent; }
+  body{ flex:1; padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+  button{ touch-action:manipulation; user-select:none; -webkit-user-select:none; font-family:inherit; }
+  .stage{ width:100%; max-width:908px; }
+  .frame,.deck{ width:100%; max-width:860px; }
+  .transport,.options{ display:flex; align-items:center; gap:10px; }
+  .options{ flex:1; }
+  .controls-row{ flex-wrap:wrap; }
+  .frame:fullscreen{ max-width:none; }
+  .exitFs{ display:none; }
+  .frame:fullscreen .exitFs, .frame.pfs .exitFs{ display:block; position:absolute; z-index:20; top:calc(12px + env(safe-area-inset-top)); right:12px;
+    width:40px; height:40px; border-radius:50%; border:0; background:rgba(0,0,0,0.5); color:#fff; font-size:18px; }
+  .frame.pfs{ position:fixed; inset:0; z-index:100; width:100vw; height:100dvh; max-width:none; aspect-ratio:auto; border-radius:0; }
+  .frame.pfs #bgVideo{ object-fit:contain; background:#000; }
+  @media (max-width:640px){
+    .stage{ padding:14px 12px; gap:12px; } .logo{ height:56px; width:auto; } .deck{ padding:12px; }
+    .transport{ flex:1; justify-content:center; } .options{ flex-basis:100%; }
+    button.ctrl{ width:46px; height:44px; } button.ctrl.play{ width:64px; } button.wide{ height:44px; } .hint{ font-size:10px; }
+  }
+  @media (pointer:coarse){
+    input[type=range]{ height:8px; } input[type=range]::-webkit-slider-thumb{ width:24px; height:24px; }
+  }
+  @media (orientation:landscape) and (max-height:520px){
+    .stage{ display:grid; max-width:none; grid-template-columns:minmax(0,1fr) 330px; grid-template-areas:"frame title" "frame deck"; align-items:center; gap:10px 14px; padding:10px 14px; }
+    .titlebar{ grid-area:title; justify-content:center; } .frame{ grid-area:frame; max-width:none; } .deck{ grid-area:deck; }
+    .logo{ height:44px; width:auto; } .hint{ display:none; } .options{ flex-basis:100%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="stage">
+  <div class="titlebar">
+    <img class="logo" src="assets/logo.png" alt="lofi bonsai" width="72" height="72">
+    <button class="themeBtn" id="themeBtn">🌙 DARK</button>
+    <button class="themeBtn" id="installBtn" hidden>⬇ INSTALL</button>
+  </div>
+
+  <div class="frame">
+    <video id="bgVideo" autoplay loop muted playsinline disablepictureinpicture>
+      <source src="assets/bg-video.mp4" type="video/mp4">
+    </video>
+    <div class="tint" id="tint"></div>
+    <div class="vignette"></div>
+    <button class="exitFs" id="exitFs" aria-label="Exit fullscreen">✕</button>
+  </div>
+
+  <div class="deck">
+    <div class="track-display">
+      <div class="marquee"><span id="trackName">— no music loaded —</span></div>
+    </div>
+
+    <div class="controls-row">
+      <div class="transport">
+      <button class="ctrl" id="prevBtn" title="Previous">⏮</button>
+      <button class="ctrl play" id="playBtn" title="Play/Pause">▶</button>
+      <button class="ctrl" id="nextBtn" title="Next">⏭</button>
+      </div>
+      <div class="options">
+      <button class="wide" id="timeBtn">🕐 AUTO</button>
+      <button class="wide" id="folderBtn">📁 ADD MUSIC FOLDER</button>
+      <button class="wide" id="fsBtn">⛶ FULLSCREEN</button>
+      <button class="ctrl" id="clearBtn" title="Remove loaded music" hidden>🗑</button>
+      </div>
+    </div>
+
+    <div class="volrow">
+      <label>VOL</label>
+      <input type="range" id="vol" min="0" max="1" step="0.01" value="0.6">
+    </div>
+
+    <div class="hint" id="hint">
+      Click "ADD MUSIC FOLDER" up to 3 times to combine songs from different folders — no renaming needed.
+      Sky mood shifts automatically with your system clock, or click the clock button to set it manually.
+      Click FULLSCREEN to expand the video. The background video plays silently — its own audio is muted.
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------------- Site theme (light/dark page skin, separate from video mood) ---------------- */
+function applyTheme(light){
+  document.documentElement.classList.toggle('light', light);
+  document.getElementById('themeBtn').textContent = light ? '☀ LIGHT' : '🌙 DARK';
+  document.querySelector('meta[name=theme-color]').content = light ? '#fdf6ec' : '#201530';
+  try{ localStorage.setItem('lofiBonsaiTheme', light ? 'light' : 'dark'); }catch(e){}
+}
+document.getElementById('themeBtn').onclick = ()=>{
+  applyTheme(!document.documentElement.classList.contains('light'));
+};
+(function initTheme(){
+  let saved = null;
+  try{ saved = localStorage.getItem('lofiBonsaiTheme'); }catch(e){}
+  applyTheme(saved === 'light');
+})();
+
+/* ---------------- Fullscreen (native where possible, CSS fallback for iPhone) ---------------- */
+const frameEl = document.querySelector('.frame');
+const fsActive = ()=> document.fullscreenElement || document.webkitFullscreenElement || frameEl.classList.contains('pfs');
+function setFsLabel(){ document.getElementById('fsBtn').textContent = fsActive() ? '⤢ EXIT FULLSCREEN' : '⛶ FULLSCREEN'; }
+async function toggleFs(){
+  if(fsActive()){
+    frameEl.classList.remove('pfs');
+    try{ (document.exitFullscreen || document.webkitExitFullscreen)?.call(document); screen.orientation?.unlock?.(); }catch(e){}
+  } else {
+    const req = frameEl.requestFullscreen || frameEl.webkitRequestFullscreen;
+    if(req){
+      try{ await req.call(frameEl); try{ await screen.orientation.lock('landscape'); }catch(e){} }
+      catch(e){ frameEl.classList.add('pfs'); }
+    } else frameEl.classList.add('pfs');
+  }
+  setFsLabel();
+}
+document.getElementById('fsBtn').onclick = toggleFs;
+document.getElementById('exitFs').onclick = toggleFs;
+['fullscreenchange','webkitfullscreenchange'].forEach(ev=> document.addEventListener(ev, setFsLabel));
+
+/* ---------------- Video background: force-mute as a safety net ---------------- */
+const bgVideo = document.getElementById('bgVideo');
+bgVideo.muted = true;
+bgVideo.volume = 0;
+bgVideo.play().catch(()=>{ /* some browsers block autoplay even muted until a click; that's fine */ });
+document.addEventListener('visibilitychange', ()=>{ document.hidden ? bgVideo.pause() : bgVideo.play().catch(()=>{}); }); // save battery; music keeps playing
+document.body.addEventListener('click', ()=>{ bgVideo.muted = true; bgVideo.play().catch(()=>{}); }, {once:true});
+
+/* ---------------- Time-of-day tint (auto by clock, or manual override) ---------------- */
+const timeModes = ['auto','night','morning','day','evening'];
+const timeLabels = {auto:'🕐 AUTO', night:'🌙 NIGHT', morning:'🌅 MORNING', day:'☀ DAY', evening:'🌆 EVENING'};
+let timeIdx = 0;
+
+function tintFor(period){
+  if(period==='night')   return {color:'rgba(8,10,45,0.55)',  blend:'multiply'};
+  if(period==='morning') return {color:'rgba(255,190,140,0.15)', blend:'soft-light'};
+  if(period==='day')     return {color:'rgba(255,255,255,0)', blend:'normal'};
+  return {color:'rgba(230,90,40,0.22)', blend:'multiply'}; // evening
+}
+function periodFromClock(){
+  const h = new Date().getHours();
+  if(h>=21 || h<5) return 'night';
+  if(h>=5 && h<8) return 'morning';
+  if(h>=8 && h<17) return 'day';
+  return 'evening';
+}
+function applyTimeOfDay(){
+  const mode = timeModes[timeIdx];
+  const period = (mode==='auto') ? periodFromClock() : mode;
+  const {color, blend} = tintFor(period);
+  const tint = document.getElementById('tint');
+  tint.style.background = color;
+  tint.style.mixBlendMode = blend;
+  document.getElementById('timeBtn').textContent = (mode==='auto') ? '🕐 AUTO' : timeLabels[mode];
+}
+document.getElementById('timeBtn').onclick = ()=>{ timeIdx=(timeIdx+1)%timeModes.length; applyTimeOfDay(); };
+applyTimeOfDay();
+setInterval(applyTimeOfDay, 60000);
+
+/* ---------------- Music player ---------------- */
+const trackName=document.getElementById('trackName');
+const playBtn=document.getElementById('playBtn');
+const vol=document.getElementById('vol');
+const player=new Audio();
+player.volume=vol.value;
+vol.oninput=()=> player.volume=vol.value;
+
+let playlist=[]; let current=-1;
+let currentLabel = '— no music loaded —';
+
+const kawaiiMessages = [
+  '✨ smile today ✨', '🌱 keep going', '☕ take a breath', "🌸 you're doing great",
+  '🌙 rest is productive too', '💭 small steps count', '🍃 stay cozy', "🎐 you've got this",
+  '🌤 one thing at a time', '🕊 be gentle with yourself'
+];
+let showingMessage = false;
+function renderTrackDisplay(){
+  if(showingMessage){
+    trackName.style.color = 'var(--msg-color)';
+    trackName.textContent = kawaiiMessages[Math.floor(Math.random()*kawaiiMessages.length)];
+  } else {
+    trackName.style.color = 'var(--lamp)';
+    trackName.textContent = currentLabel;
+  }
+}
+setInterval(()=>{ showingMessage = !showingMessage; renderTrackDisplay(); }, 11000);
+
+function setTrack(i,autoplay){
+  if(playlist.length===0) return;
+  current=((i%playlist.length)+playlist.length)%playlist.length;
+  const t=playlist[current];
+  player.src=t.url;
+  currentLabel = t.name;
+  showingMessage = false;
+  renderTrackDisplay();
+  if(autoplay){ player.play(); }
+}
+playBtn.onclick=()=>{
+  if(playlist.length===0) return;
+  if(player.paused){ player.play(); playBtn.textContent='⏸'; }
+  else { player.pause(); playBtn.textContent='▶'; }
+};
+document.getElementById('nextBtn').onclick=()=> setTrack(current+1,true);
+document.getElementById('prevBtn').onclick=()=> setTrack(current-1,true);
+player.addEventListener('ended', ()=> setTrack(current+1,true));
+
+const IS_TOUCH = matchMedia('(pointer:coarse)').matches;
+const HAS_DIR = 'showDirectoryPicker' in window;
+const DB_NAME='lofiBonsaiDB', STORE='handles', KEY='musicDirs'; // now stores an ARRAY of handles
+const MAX_FOLDERS = 3;
+
+function idbGetAll(){
+  return new Promise((resolve)=>{
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = ()=> req.result.createObjectStore(STORE);
+    req.onsuccess = ()=>{
+      const db = req.result;
+      const tx = db.transaction(STORE,'readonly');
+      const g = tx.objectStore(STORE).get(KEY);
+      g.onsuccess = ()=> resolve(g.result || []);
+      g.onerror = ()=> resolve([]);
+    };
+    req.onerror = ()=> resolve([]);
+  });
+}
+function idbSetAll(handles){
+  const req = indexedDB.open(DB_NAME, 1);
+  req.onupgradeneeded = ()=> req.result.createObjectStore(STORE);
+  req.onsuccess = ()=>{
+    const db = req.result;
+    const tx = db.transaction(STORE,'readwrite');
+    tx.objectStore(STORE).put(handles, KEY);
+  };
+}
+
+function updateFolderBtnLabel(){
+  if(!HAS_DIR){ document.getElementById('folderBtn').textContent = playlist.length ? '📁 ADD MORE MUSIC' : '📁 ADD MUSIC'; return; }
+  const n = loadedFolderCount;
+  document.getElementById('folderBtn').textContent =
+    n===0 ? '📁 ADD MUSIC FOLDER' : `📁 ADD FOLDER (${n}/${MAX_FOLDERS})`;
+}
+
+let loadedFolderCount = 0;
+async function appendFromDirHandle(dirHandle){
+  const existingNames = new Set(playlist.map(t=>t.name));
+  const added = [];
+  for await (const entry of dirHandle.values()){
+    if(entry.kind==='file' && /\.(mp3|wav|ogg|m4a)$/i.test(entry.name) && !existingNames.has(entry.name)){
+      const file = await entry.getFile();
+      added.push({name: entry.name, url: URL.createObjectURL(file)});
+      existingNames.add(entry.name);
+    }
+  }
+  if(added.length>0){
+    const wasEmpty = playlist.length===0;
+    playlist = playlist.concat(added);
+    document.getElementById('clearBtn').hidden = false;
+    currentLabel = playlist.length+' track(s) loaded — press play';
+    showingMessage = false;
+    renderTrackDisplay();
+    if(wasEmpty) setTrack(0,false);
+  }
+  return added.length;
+}
+
+async function tryRestoreFolders(){
+  if(!('indexedDB' in window)) return;
+  const handles = await idbGetAll();
+  loadedFolderCount = 0;
+  let needsReconfirm = false;
+  for(const handle of handles){
+    try{
+      const perm = await handle.queryPermission({mode:'read'});
+      if(perm==='granted'){
+        await appendFromDirHandle(handle);
+        loadedFolderCount++;
+      } else {
+        needsReconfirm = true;
+      }
+    }catch(e){ /* stale handle, skip */ }
+  }
+  updateFolderBtnLabel();
+  if(needsReconfirm && playlist.length===0){
+    currentLabel = 'Click ADD MUSIC FOLDER to re-allow access';
+    showingMessage = false;
+    renderTrackDisplay();
+  }
+}
+
+document.getElementById('folderBtn').onclick = async ()=>{
+  if(loadedFolderCount >= MAX_FOLDERS && 'showDirectoryPicker' in window){
+    currentLabel = `Already using ${MAX_FOLDERS} folders (max)`;
+    showingMessage = false;
+    renderTrackDisplay();
+    return;
+  }
+  if('showDirectoryPicker' in window){
+    try{
+      const handle = await window.showDirectoryPicker();
+      const existing = await idbGetAll();
+      existing.push(handle);
+      idbSetAll(existing);
+      await appendFromDirHandle(handle);
+      loadedFolderCount++;
+      updateFolderBtnLabel();
+    }catch(e){ /* user cancelled */ }
+  } else {
+    // Phones/tablets, Firefox, Safari: pick files (or a folder on desktop); files are saved on this device
+    const input = document.createElement('input');
+    input.type='file'; input.multiple = true; input.accept='audio/*,.mp3,.m4a,.wav,.ogg';
+    if(!IS_TOUCH) input.webkitdirectory = true;
+    input.onchange = (e)=> addFiles(Array.from(e.target.files));
+    input.click();
+  }
+};
+tryRestoreFolders().then(restoreBlobs);
+
+/* ---------------- Saved music for devices without folder access (phones, Firefox, Safari) ---------------- */
+function filesDB(){ return new Promise((res,rej)=>{ const r=indexedDB.open('lofiBonsaiFiles',1);
+  r.onupgradeneeded=()=>r.result.createObjectStore('tracks'); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); }
+async function saveBlobs(files){ try{ const db=await filesDB(); const st=db.transaction('tracks','readwrite').objectStore('tracks'); files.forEach(f=>st.put(f,f.name)); navigator.storage?.persist?.(); }catch(e){} }
+async function loadBlobs(){ try{ const db=await filesDB(); return await new Promise(res=>{ const out=[]; const c=db.transaction('tracks').objectStore('tracks').openCursor();
+  c.onsuccess=()=>{ const cur=c.result; if(cur){ out.push({name:cur.key,blob:cur.value}); cur.continue(); } else res(out); }; c.onerror=()=>res([]); }); }catch(e){ return []; } }
+function addTracks(list){
+  const names = new Set(playlist.map(t=>t.name));
+  const fresh = list.filter(t=>!names.has(t.name));
+  if(!fresh.length) return;
+  const wasEmpty = playlist.length===0;
+  playlist = playlist.concat(fresh);
+  document.getElementById('clearBtn').hidden = false;
+  currentLabel = playlist.length+' track(s) loaded — press play'; showingMessage=false; renderTrackDisplay();
+  updateFolderBtnLabel();
+  if(wasEmpty) setTrack(0,false);
+}
+function addFiles(files){
+  files = files.filter(f=>/\.(mp3|wav|ogg|m4a)$/i.test(f.name) || f.type.startsWith('audio/'));
+  saveBlobs(files);
+  addTracks(files.map(f=>({name:f.name, url:URL.createObjectURL(f)})));
+}
+async function restoreBlobs(){ const saved = await loadBlobs(); addTracks(saved.map(s=>({name:s.name, url:URL.createObjectURL(s.blob)}))); }
+document.getElementById('clearBtn').onclick = async ()=>{
+  if(!confirm('Remove all loaded music from this app?')) return;
+  player.pause(); playBtn.textContent='▶';
+  playlist.forEach(t=>URL.revokeObjectURL(t.url)); playlist=[]; current=-1; loadedFolderCount=0;
+  try{ const db=await filesDB(); db.transaction('tracks','readwrite').objectStore('tracks').clear(); }catch(e){}
+  try{ idbSetAll([]); }catch(e){}
+  currentLabel='— no music loaded —'; showingMessage=false; renderTrackDisplay();
+  document.getElementById('clearBtn').hidden=true; updateFolderBtnLabel();
+};
+
+/* ---------------- PWA: lock-screen controls, install button, service worker ---------------- */
+player.addEventListener('play', ()=>{ playBtn.textContent='⏸'; window.updateMedia?.(); });
+player.addEventListener('pause', ()=>{ playBtn.textContent='▶'; });
+if('mediaSession' in navigator){
+  const ms = navigator.mediaSession;
+  const art = [{src:'icons/icon-192.png',sizes:'192x192',type:'image/png'},{src:'icons/icon-512.png',sizes:'512x512',type:'image/png'}];
+  window.updateMedia = ()=>{ ms.metadata = new MediaMetadata({title:currentLabel, artist:'lofi bonsai', artwork:art}); };
+  ms.setActionHandler('play', ()=>player.play());
+  ms.setActionHandler('pause', ()=>player.pause());
+  ms.setActionHandler('previoustrack', ()=>setTrack(current-1,true));
+  ms.setActionHandler('nexttrack', ()=>setTrack(current+1,true));
+}
+const probe = new Audio(); probe.volume = 0.5;
+if(probe.volume !== 0.5) document.querySelector('.volrow').style.display='none'; // iOS: volume is hardware-only
+
+let installPrompt = null; const installBtn = document.getElementById('installBtn');
+addEventListener('beforeinstallprompt', e=>{ e.preventDefault(); installPrompt=e; installBtn.hidden=false; });
+installBtn.onclick = async ()=>{ installPrompt.prompt(); await installPrompt.userChoice; installPrompt=null; installBtn.hidden=true; };
+addEventListener('appinstalled', ()=>{ installBtn.hidden=true; });
+
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
+const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+if(IS_TOUCH) document.getElementById('hint').textContent =
+  'Tap ADD MUSIC and pick songs from your phone — they stay saved on this device. Fullscreen works best with the phone turned sideways.'
+  + (isIOS && !standalone ? ' To install: Share → Add to Home Screen.' : '');
+
+if('serviceWorker' in navigator && location.protocol.startsWith('http'))
+  addEventListener('load', ()=> navigator.serviceWorker.register('sw.js').catch(()=>{}));
+</script>
+</body>
+</html>
